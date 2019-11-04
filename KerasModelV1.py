@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sun Oct 27 21:16:33 2019
-
 @author: Shahbaz Shah Syed
 """
 
-###BINARY CLASSIFICATION PROBLEM
+### BINARY CLASSIFICATION
 
 #Import the required Libraries
 from keras.layers import Dense,Dropout
