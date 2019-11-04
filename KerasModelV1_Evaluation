@@ -5,8 +5,11 @@ Created on Sun Nov  3 17:07:13 2019
 @author: Shahbaz Shah Syed
 """
 
-#load and evaluate a saved model
-#from numpy import loadtxt
+
+#######  LOAD AND EVALUATE A SAVED MODEL
+
+
+#import keras and libraries
 from keras.models import load_model
 import pandas as pd
 import numpy as np
@@ -34,12 +37,6 @@ x_test = Tabelle_Test_Set.drop(columns=['Gewicht_Value']) #x values, inputsrt
 
 #Extract output value column
 y_test = Tabelle_Test_Set['Gewicht_Value']
-
-#evaluate the model
-# =============================================================================
-# score = model.evaluate(x_test,y_test, verbose = 0)
-# print("%s: %.2f%%" % (model.metrics_names[1], score[1]*100))
-# =============================================================================
 
 
 #Do a Prediction and check the Precision
