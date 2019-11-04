@@ -6,12 +6,8 @@ Created on Sun Oct 27 21:16:33 2019
 """
 
 ###BINARY CLASSIFICATION PROBLEM
-import timeit
-#start = timeit.default_timer()
 
 #Import the required Libraries
-#from sklearn.metrics import confusion_matrix, recall_score, precision_score, accuracy_score, f1_score, jaccard_score, classification_report, roc_auc_score, roc_curve, average_precision_score, precision_recall_curve
-#from sklearn.model_selection import train_test_split
 from keras.layers import Dense,Dropout
 from keras.models import Sequential
 from keras.regularizers import l2
@@ -23,7 +19,7 @@ from sklearn.preprocessing import StandardScaler
 #from keras.utils import to_categorical
 #from random import seed
 from keras.optimizers import Adam
-
+import timeit
 
 
 
@@ -38,26 +34,15 @@ Tabelle = pd.read_excel(Test2,names=['Plastzeit Z [s]','Massepolster [mm]',
                                 'Fläche Massedr [bar*s]',
                                 'Fläche Spritzweg [mm*s]', 'Gewicht'])
 
-
-#SHUFFLING The Data before splitting, so that each set has some Data from all categories/classes
-#Tabelle.reindex(np.random.permutation(Tabelle.index))
-#seed(4)
+_
+#SHUFFLING The Data before splitting, so that each set has some Data from all categories/classes. Seed acitvated (random_state).
 Tabelle = Tabelle.sample(frac=1, random_state=4).reset_index(drop=True)
-# =============================================================================
-# 
-# =============================================================================
-# =============================================================================
-# for i in range(4):
-#     print(Tabelle[i])
-# 
-# =============================================================================
 
-#input Data
+#Extract input Data
 Tabelle_feat = Tabelle.drop(columns=['Gewicht']) #x values, inputsrt
 
-#Extract output value column
+#Extract output Data / value column
 Gewicht = Tabelle['Gewicht']
-
 
 #Toleranz festlegen
 toleranz = 1
@@ -70,7 +55,6 @@ Gewicht_tol = Gewicht_abw*toleranz
 Gewicht_OG = Gewicht_mittel+Gewicht_tol
 Gewicht_UG = Gewicht_mittel-Gewicht_tol
 
-
 #Gewicht Werte in Gut und Schlecht zuordnen
 G = []
 for element in Gewicht:
@@ -82,43 +66,32 @@ G = pd.DataFrame(G)
 G=G.rename(columns={0:'Gewicht_Value'})
 Gewicht = pd.concat([Gewicht, G], axis=1)
 
-#Target Data in 1s and 0s
+#convert Target Data in 1s and 0s
 Gewicht_Value = Gewicht['Gewicht_Value'] #y values, mixed 1 and 0
 
+#scale Data
 scaler = StandardScaler()
 scaler.fit(Tabelle_feat)
-#transform can only work if table has been fitted before
 scaled_features = scaler.transform(Tabelle_feat)
-
 Tabelle_feat_scaled = pd.DataFrame(scaled_features)
 
 
-#Split the train, validation and test set
+#Create Split ratio for the train, validation and test set
 Tabelle_feat=Tabelle.shape[0]
 Train_rows = int(Tabelle_feat*0.8)
 Val_Test_rows = int(Tabelle_feat*0.1)
 
-# =============================================================================
-# x_train = Tabelle_feat_scaled[:Train_rows]
-# x_val = Tabelle_feat_scaled[Train_rows:(Train_rows+Val_Test_rows)]
-# x_test = Tabelle_feat_scaled[(Train_rows+Val_Test_rows):(Train_rows+Val_Test_rows*2)]
-# 
-# y_train = Gewicht_Value[:Train_rows]
-# y_val = Gewicht_Value[Train_rows:(Train_rows+Val_Test_rows)]
-# y_test = Gewicht_Value[(Train_rows+Val_Test_rows):(Train_rows+Val_Test_rows*2)]
-# =============================================================================
-
+#Training and Validation Data (input, output) for K-fold cross-validation)
 X = Tabelle_feat_scaled[:(Train_rows+Val_Test_rows)]
 y = Gewicht_Value[:(Train_rows+Val_Test_rows)]
 
+#creating Test Set with the rest and exporting to Excel, to use with "Model Evaluation"-File.
 x_test = Tabelle_feat_scaled[(Train_rows+Val_Test_rows):]
 y_test = Gewicht_Value[(Train_rows+Val_Test_rows):]
-
 test_set = pd.concat([x_test, y_test], axis = 1)
-
 test_set.to_excel("Rezyklat_Test_Set.xlsx", index = False)
 
-
+#Hyperparameters
 num_epochs = 175
 hidden_units = 512
 num_batchsize = 32
@@ -127,22 +100,18 @@ kernel = 0.001
 dropout_value = 0.2
 
 
-#Create a Neural Network
+#Create a Neural Network builder Method
 def build_model():
     model = Sequential()
     model.add(Dense(hidden_units, activation='relu', input_shape=(10,), kernel_regularizer=l2(kernel))) #
     model.add(Dropout(dropout_value, noise_shape=None, seed=1))
     model.add(Dense(hidden_units, activation='relu', kernel_regularizer=l2(kernel))) #
-# =============================================================================
-#     model.add(Dropout(dropout_value, noise_shape=None, seed=1))
-#     model.add(Dense(hidden_units, activation='relu'))
-# =============================================================================
     model.add(Dropout(dropout_value, noise_shape=None, seed=1))
     model.add(Dense(1, activation='sigmoid'))
 
     #Compile the Model/Neural Network
     model.compile(loss='binary_crossentropy',optimizer='adam',metrics=['accuracy'])
-    #Adam(learning_rate = learningrate)
+    #Adam(learning_rate = learningrate)   #learning rate is set to default (default = 1)
 
     #Check the Model summary
     #model.summary()
@@ -150,21 +119,17 @@ def build_model():
 
 
 
-#K-FOLD CROSS-VALIDATION, händisch ohne scikit
-
+#K-FOLD CROSS-VALIDATION, "händisch", ohne scikit
 k=9
 num_val_samples = len(X) // k
-
-all_scores=[]
-all_mae_histories = []
-val_split = 1/9
 
 train_acc = []
 train_loss = []
 val_acc = []
 val_loss = []
 
-for turn in range(1):
+for turn in range(1): #incase to train the model multiple times in a row, change range to a value > 1
+  
     for i in range(k):
         print('processing fold #', i)
         val_data = X[i * num_val_samples: (i+1)*num_val_samples]
@@ -175,29 +140,9 @@ for turn in range(1):
         
         #TRAIN NEURAL NETWORK
         #es = EarlyStopping(monitor='val_loss', mode = 'min', verbose = 1, patience = 1)
-        
         model = build_model()
         model_output = model.fit(partial_train_data, partial_train_targets, validation_data =(val_data, val_targets), epochs=num_epochs, batch_size = num_batchsize, verbose = 0) #, callbacks = [es]
-        
-        #DOCUMENT NEURAL NETWORK OUTCOMES    
-        #val_mse, val_mae = model.evaluate(val_data, val_targets, verbose=0)
-        #all_scores.append(val_mae)
-        #mae_history = np.mean(model_output.history['val_accuracy'])
-        #all_mae_histories.append(mae_history)
-    
-    # =============================================================================
-    # average_mae_history = [np.mean([x[i] for x in all_mae_histories]) for i in range(num_epochs)]
-    # 
-    # plt.plot(range(1, len(average_mae_history)+1), average_mae_history)
-    # plt.xlabel('Epochs')
-    # plt.ylabel('Validation MAE')
-    # plt.show()
-    # =============================================================================
-    
-    # =============================================================================
-    # model_output = model.fit(x_train, y_train, epochs = 20, batch_size=20, validation_data =(x_val, y_val))
-    # =============================================================================
-    
+             
     tr_loss = np.mean(model_output.history['loss'])
     tr_acc = np.mean(model_output.history['accuracy'])
     v_acc = np.mean(model_output.history['val_accuracy'])
@@ -222,10 +167,7 @@ for turn in range(1):
     plt.xlabel('Epoch')
     plt.legend(['Train', 'Validation'], loc='upper left')
     plt.show()
-
-    #plt.savefig("accuracy"+str(turn)+".png")
-    
-    
+       
     # Plot training & validation loss values
     plt.plot(model_output.history['loss'])
     plt.plot(model_output.history['val_loss'])
@@ -234,8 +176,6 @@ for turn in range(1):
     plt.xlabel('Epoch')
     plt.legend(['Train', 'Validation'], loc='upper left')
     plt.show()
-    
-    #plt.savefig("loss"+str(turn)+".png")
 
 stop = timeit.default_timer()
 print('Time: ', stop)  
